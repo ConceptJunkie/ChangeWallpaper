@@ -1,19 +1,20 @@
 import argparse
-import pythoncom
-import shutil
-from win32com.shell import shell, shellcon
-import random
 import os.path
 import PIL.Image as PIL
+import pythoncom
+import random
+import shutil
 
-screen_width = 1920
-screen_height = 1080
+from win32com.shell import shell, shellcon
+
+screen_width = 3840
+screen_height = 2160
 
 screen_aspect = screen_width / screen_height
 
-PROGRAM_NAME = "ChangeWallaper"
-VERSION = "1.1"
-COPYRIGHT_MESSAGE = "copyright (c) 2013, Rick Gutleber"
+PROGRAM_NAME = "ChangeWallpaper"
+VERSION = "1.1.1"
+COPYRIGHT_MESSAGE = "copyright (c) 2019 (2013), Rick Gutleber"
 
 parser = argparse.ArgumentParser( prog=PROGRAM_NAME, description=PROGRAM_NAME + ' - ' + VERSION +
                                   ' - ' + COPYRIGHT_MESSAGE )
