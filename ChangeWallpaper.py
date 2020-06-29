@@ -1,11 +1,16 @@
 import argparse
 import os.path
 import PIL.Image as PIL
-import pythoncom
 import random
-import shutil
+import sys
 
-from win32com.shell import shell, shellcon
+if sys.platform == 'win32':
+    import pythoncom
+    import shutil
+
+    from win32com.shell import shell, shellcon
+elif sys.platform == 'darwin':
+    import appscript
 
 screen_width = 3840
 screen_height = 2160
@@ -13,8 +18,8 @@ screen_height = 2160
 screen_aspect = screen_width / screen_height
 
 PROGRAM_NAME = "ChangeWallpaper"
-VERSION = "1.1.1"
-COPYRIGHT_MESSAGE = "copyright (c) 2019 (2013), Rick Gutleber"
+VERSION = "1.2.0"
+COPYRIGHT_MESSAGE = "copyright (c) 2020 (2013), Rick Gutleber"
 
 parser = argparse.ArgumentParser( prog=PROGRAM_NAME, description=PROGRAM_NAME + ' - ' + VERSION +
                                   ' - ' + COPYRIGHT_MESSAGE )
@@ -36,6 +41,7 @@ if newWallpaper == '':
 print( newWallpaper )
 
 target = os.path.join( sysDir, 'wallpaper' + os.path.splitext( newWallpaper )[ 1 ] )
+target2 = os.path.join( sysDir, 'wallpaper2' + os.path.splitext( newWallpaper )[ 1 ] )
 
 image = PIL.open( newWallpaper )
 
@@ -47,23 +53,45 @@ if ( image_aspect > screen_aspect ):
 else:
     scaling = screen_height / image_height
 
-print( image_width, image_height, scaling )
-
 # we don't want to scale too much or it just looks awful
 if scaling > 2.0:
     scaling = 2.0
 
+print( image_width, image_height, scaling )
+
 resized_image = image.resize( ( int( image_width * scaling ), int( image_height * scaling ) ),
                               PIL.BICUBIC if scaling > 2.0 else PIL.ANTIALIAS )
 
-resized_image.save( target )
+useTarget2 = False
+
+if sys.platform == 'darwin':
+    if os.path.isfile( target ):
+        useTarget2 = True
+        os.remove( target )
+        resized_image.save( target2 )
+    else:
+        os.remove( target2 )
+        resized_image.save( target )
+else:
+    resized_image.save( target )
 
 with open( os.path.join( sysDir, 'wallpaper.log' ), 'a' ) as logfile:
     logfile.write( wallpaper )
 
-# Windows juju to change the wallpaper
-iAD = pythoncom.CoCreateInstance( shell.CLSID_ActiveDesktop, None,
-                                  pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IActiveDesktop )
-iAD.SetWallpaper( target, 0 )
-iAD.ApplyChanges( shellcon.AD_APPLY_ALL )
+if sys.platform == 'win32':
+    # Windows juju to change the wallpaper
+    iAD = pythoncom.CoCreateInstance( shell.CLSID_ActiveDesktop, None,
+                                      pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IActiveDesktop )
+    iAD.SetWallpaper( target, 0 )
+    iAD.ApplyChanges( shellcon.AD_APPLY_ALL )
+elif sys.platform == 'darwin':
+    # OSX juju to change the wallpaper (including swapping between different file names
+    # so you don't have to restart Dock)
+    systemEvents = appscript.app( 'System Events' )
+    desktops = systemEvents.desktops.display_name.get( )
+
+    for desktop in desktops:
+        desk = systemEvents.desktops[ appscript.its.display_name == desktop ]
+        desk.picture.set( appscript.mactypes.File( target2 if useTarget2 else target ) )
+
 
